@@ -1,25 +1,29 @@
 # lein-boot
 
-A Leiningen plugin to do many wonderful things.
+A Leiningen plugin to run ring-servlet with Servlet 3 API.
 
 ## Usage
 
-FIXME: Use this for user-level plugins:
+Put `[com.andrewmcveigh/lein-boot "0.1.0-SNAPSHOT"]` into the `:plugins` vector
+of your project.clj.
 
-Put `[lein-boot "0.1.0-SNAPSHOT"]` into the `:plugins` vector of your
-`:user` profile, or if you are on Leiningen 1.x do `lein plugin install
-lein-boot 0.1.0-SNAPSHOT`.
+You'll need the following dependencies:
 
-FIXME: Use this for project-level plugins:
+[ring/ring-servlet "1.1.0" :exclusions [javax.servlet/servlet-api]]
 
-Put `[lein-boot "0.1.0-SNAPSHOT"]` into the `:plugins` vector of your project.clj.
+You'll also want a servlet jar, and maybe ring/ring-devel. Probably best to put
+these in your :dev profile:
 
-FIXME: and add an example usage that actually makes sense:
+:profiles {:dev {:dependencies [[org.eclipse.jetty/jetty-webapp "8.1.0.RC5"]
+                                [ring/ring-devel "1.1.0"]]}}
+
+## Example
 
     $ lein boot
+    $ lein boot :port 8080
 
 ## License
 
-Copyright © 2013 FIXME
+Copyright © 2013 Andrew Mcveigh
 
 Distributed under the Eclipse Public License, the same as Clojure.
