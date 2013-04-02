@@ -9,13 +9,17 @@ of your project.clj.
 
 You'll need the following dependencies:
 
+```clojure
 [ring/ring-servlet "1.1.0" :exclusions [javax.servlet/servlet-api]]
+```
 
 You'll also want a servlet jar, and maybe ring/ring-devel. Probably best to put
 these in your :dev profile:
 
+```clojure
 :profiles {:dev {:dependencies [[org.eclipse.jetty/jetty-webapp "8.1.0.RC5"]
                                 [ring/ring-devel "1.1.0"]]}}
+```
 
 ## Example
 
