@@ -65,10 +65,7 @@
            (.setHandler (doto context#
                           (.addServlet
                             (ServletHolder.
-                              (proxy [javax.servlet.http.HttpServlet] []
-                                (service [request# response#]
-                                  ((servlet/make-service-method (resolve '~handler))
-                                   ~'this request# response#))))
+                              (servlet/servlet  (var ~handler)))
                             "/*")))
            (.start))))
      (defn ~'stop-server [] (.stop @~'ring-server))
