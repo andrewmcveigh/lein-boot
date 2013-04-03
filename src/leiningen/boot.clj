@@ -79,6 +79,7 @@
         port (try (Integer. port) (catch Exception _))
         port (or port (:port (:ring project)) 8080)
         handler (or (:handler (:ring project)) (:boot project))
+        handler (if (sequential? handler) (first handler) handler)
         project (update-in project
                            [:repl-options :init]
                            #(list 'do % (boot-server port handler)))]
