@@ -24,10 +24,12 @@
         (.exists (io/as-file "src/main/webapp")) "src/main/webapp"
         (.exists (io/as-file "public")) "public"))
 
-(defn boot-server [port handler]
+(defn boot-server [port & handlers]
   `(do
      (require 'ring.util.servlet)
-     (require '~(symbol (namespace handler)))
+     ~(cons 'do
+            (for [handler (distinct (map (comp symbol namespace) handlers))]
+              `(require '~handler))) 
      (def ~'ring-server (atom nil))
      (defn ~'start-server []
        (let [path# ~(find-webapp-root)
@@ -60,13 +62,17 @@
                         (JettyWebXmlConfiguration.)]))
          (.setClassLoader context# cloader#)
          (when-not @~'ring-server (reset! ~'ring-server (Server. ~port)))
+         (doseq [handler# ~(map (fn [x] `(var ~x)) handlers)
+                 :let [ctx# (-> handler# meta :name name)]]
+           (prn ctx#)
+           (doto context#
+             (.addServlet
+               (ServletHolder.
+                 (servlet/servlet handler#))
+               (str (when ~(> (count handlers) 1) (str \/ ctx#)) "/*"))))
          (doto @~'ring-server
            (.stop)
-           (.setHandler (doto context#
-                          (.addServlet
-                            (ServletHolder.
-                              (servlet/servlet  (var ~handler)))
-                            "/*")))
+           (.setHandler context#)
            (.start))))
      (defn ~'stop-server [] (.stop @~'ring-server))
      (~'start-server)))
@@ -79,8 +85,9 @@
         port (try (Integer. port) (catch Exception _))
         port (or port (:port (:ring project)) 8080)
         handler (or (:handler (:ring project)) (:boot project))
-        handler (if (sequential? handler) (first handler) handler)
+        handler (if (sequential? handler) handler [handler])
+        _ (clojure.pprint/pprint (apply boot-server port handler))
         project (update-in project
                            [:repl-options :init]
-                           #(list 'do % (boot-server port handler)))]
+                           #(list 'do % (apply boot-server port handler)))]
     (repl/repl project)))
