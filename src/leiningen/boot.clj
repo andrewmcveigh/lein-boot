@@ -62,14 +62,14 @@
                         (JettyWebXmlConfiguration.)]))
          (.setClassLoader context# cloader#)
          (when-not @~'ring-server (reset! ~'ring-server (Server. ~port)))
-         (doseq [handler# ~(map (fn [x] `(var ~x)) handlers)
+         (doseq [handler# ~(mapv (fn [x] `(var ~x)) handlers)
                  :let [ctx# (-> handler# meta :name name)]]
-           (prn ctx#)
            (doto context#
              (.addServlet
                (ServletHolder.
                  (servlet/servlet handler#))
-               (str (when ~(> (count handlers) 1) (str \/ ctx#)) "/*"))))
+               (str (when (and ~(> (count handlers) 1) ctx#)
+                      (str \/ ctx#)) "/*"))))
          (doto @~'ring-server
            (.stop)
            (.setHandler context#)
