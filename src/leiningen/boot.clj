@@ -3,6 +3,7 @@
     [clojure.pprint]
     [leinjacker.deps :as deps]
     [leiningen.repl :as repl]
+    [leiningen.test :as test]
     [leinjacker.eval :refer (eval-in-project)]
     [ring.util.servlet :as servlet]
     [clojure.java.io :as io]
@@ -96,7 +97,7 @@
      ~->default-servlet-mapping
      ~add-servlet-mappings
      (def ~'ring-server (atom nil))
-     (defn ~'start-server []
+     (defn ~'start-server [& [port#]]
        (let [path# ~webapp-root
              context# (WebAppContext. path# "/")
              cloader# (WebAppClassLoader. context#)
@@ -131,7 +132,7 @@
                         (FragmentConfiguration.)
                         (JettyWebXmlConfiguration.)]))
          (.setClassLoader context# cloader#)
-         (when-not @~'ring-server (reset! ~'ring-server (Server. ~port)))
+         (when-not @~'ring-server (reset! ~'ring-server (Server. (or port# ~port))))
          (doseq [handler# ~(mapv (fn [x] `(var ~x)) handlers)
                  :let [ctx# (-> handler# meta :name name)]]
            (doto context#
@@ -168,7 +169,7 @@
           project
           deps-specs))
 
-(defn boot [project & args]
+(defn boot [project & [task & more]]
   (let [{:keys [port]}
         (apply hash-map
                (mapcat (fn [[k v]] [(keyword (string/replace k #"^:" "")) v])
@@ -192,4 +193,6 @@
                                                      port
                                                      mappings
                                                      handlers)))]
-    (repl/repl project)))
+    (case task
+      "test" (apply test/test project more)
+      (repl/repl project))))
