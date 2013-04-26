@@ -4,6 +4,9 @@
     [leinjacker.deps :as deps]
     [leiningen.repl :as repl]
     [leiningen.test :as test]
+    [leiningen.core.eval :as eval]
+    [leiningen.core.main :as main]
+    [leiningen.core.project :as project]
     [leinjacker.eval :refer (eval-in-project)]
     [ring.util.servlet :as servlet]
     [clojure.java.io :as io]
@@ -154,7 +157,6 @@
            (.setHandler context#)
            (.start))))
      (defn ~'stop-server [] (.stop @~'ring-server))
-     (~'start-server)
      (ns ~'user)))
 
 (defn update-project
@@ -169,30 +171,86 @@
           project
           deps-specs))
 
-(defn boot [project & [task & more]]
+(def tasks #{"test" "repl"})
+
+(defn test2
+  "Run the project's tests.
+
+  Marking deftest or ns forms with metadata allows you to pick selectors to
+  specify a subset of your test suite to run:
+
+  (deftest ^:integration network-heavy-test
+  (is (= [1 2 3] (:numbers (network-operation)))))
+
+  Write the selectors in project.clj:
+
+  :test-selectors {:default (complement :integration)
+  :integration :integration
+  :all (constantly true)}
+
+  Arguments to this task will be considered test selectors if they are keywords,
+  otherwise arguments must be test namespaces or files to run. With no
+  arguments the :default test selector is used if present, otherwise all
+  tests are run. Test selector arguments must come after the list of namespaces.
+
+  A default :only test-selector is available to run select tests. For example,
+  `lein test :only leiningen.test.test/test-default-selector` only runs the
+  specified test. A default :all test-selector is available to run all tests."
+  [project form2 & tests]
+  (binding [main/*exit-process?* (if (= :leiningen (:eval-in project))
+                                   false
+                                   main/*exit-process?*)
+            test/*exit-after-tests* (if (= :leiningen (:eval-in project))
+                                      false
+                                      test/*exit-after-tests*)]
+    (let [project (project/merge-profiles project [:leiningen/test :test])
+          [nses selectors] (#'test/read-args tests project)
+          form (#'test/form-for-testing-namespaces nses nil (vec selectors))]
+      (try (when-let [n (eval/eval-in-project
+                          project
+                          `(do ~form2
+                               ;'(require 'boot)
+                               ~form)
+                          '(require 'clojure.test))]
+             (when (and (number? n) (pos? n))
+               (throw (ex-info "Tests Failed" {:exit-code n}))))
+        (catch clojure.lang.ExceptionInfo e
+          (main/abort "Tests failed.")))))) 
+
+(defn boot [project & [task & more :as args]]
   (let [{:keys [port]}
-        (apply hash-map
-               (mapcat (fn [[k v]] [(keyword (string/replace k #"^:" "")) v])
-                       (partition 2 args)))
+        (if (tasks task)
+          {}
+          (apply hash-map
+                 (mapcat (fn [[k v]] [(keyword (string/replace k #"^:" "")) v])
+                         (partition 2 args))))
         port (try (Integer. port) (catch Exception _))
         port (or port (:port (:ring project)) 8080)
         handlers (or (:handler (:ring project)) (:boot project))
         handlers (if (sequential? handlers) handlers [handlers])
         mappings (servlet-mappings project)
         ;_ (clojure.pprint/pprint (boot-server (find-webapp-root project)
-                                              ;port
-                                              ;mappings
-                                              ;handlers))
+        ;port
+        ;mappings
+        ;handlers))
         ;_ (prn)
         project (add-deps project
                           '[ring/ring-servlet "1.1.8"]
                           '[org.eclipse.jetty/jetty-webapp "8.1.0.RC5"])
         project (update-in project
                            [:repl-options :init]
-                           #(list 'do % (boot-server (find-webapp-root project)
-                                                     port
-                                                     mappings
-                                                     handlers)))]
+                           #(list 'do
+                                  %
+                                  (boot-server (find-webapp-root project)
+                                               port
+                                               mappings
+                                               handlers)
+                                  '(boot/start-server)))]
     (case task
-      "test" (apply test/test project more)
+      "exit" nil
+      "test" (test2 project
+                    (boot-server (find-webapp-root project)
+                                 port
+                                 mappings
+                                 handlers))
       (repl/repl project))))
