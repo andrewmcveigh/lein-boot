@@ -91,12 +91,20 @@
 
 (defn boot-server [webapp-root port default-mappings handlers]
   `(do
+     (println)
+     (println "lein-boot...")
      (ns ~'boot)
      (require 'ring.util.servlet)
-     (require '[clojure.string :as string])
+     (require '[clojure.string :as ~'string])
      ~(cons 'do
             (for [handler (distinct (map (comp symbol namespace) handlers))]
-              `(require '~handler)))
+              `(try
+                 (require '~handler)
+                 (catch RuntimeException e#
+                   (println)
+                   (println "Couldn't require handler namespace: " '~handler)
+                   (println)
+                   (.printStackTrace e#)))))
      ~meta-inf-resource
      ~->default-servlet-mapping
      ~add-servlet-mappings
@@ -216,7 +224,7 @@
              (when (and (number? n) (pos? n))
                (throw (ex-info "Tests Failed" {:exit-code n}))))
         (catch clojure.lang.ExceptionInfo e
-          (main/abort "Tests failed.")))))) 
+          (main/abort "Tests failed."))))))
 
 (defn boot [project & [task & more :as args]]
   (let [{:keys [port]}
@@ -230,10 +238,10 @@
         handlers (or (:handler (:ring project)) (:boot project))
         handlers (if (sequential? handlers) handlers [handlers])
         mappings (servlet-mappings project)
-        ;_ (clojure.pprint/pprint (boot-server (find-webapp-root project)
-        ;port
-        ;mappings
-        ;handlers))
+        ;_  (clojure.pprint/pprint (boot-server (find-webapp-root project)
+                                               ;port
+                                               ;mappings
+                                               ;handlers))
         ;_ (prn)
         project (add-deps project
                           '[ring/ring-servlet "1.1.8"]
