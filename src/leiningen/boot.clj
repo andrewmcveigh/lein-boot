@@ -35,23 +35,24 @@
       war-resources
       (cond (.exists (io/as-file "src/test/webapp")) "src/test/webapp"
             (.exists (io/as-file "src/main/webapp")) "src/main/webapp"
+            (.exists (io/as-file "resources/public")) "resources/public"
             (.exists (io/as-file "public")) "public"))))
 
 (def web-app-ignore
   #{"/WEB-INF" "/META-INF" "/.DS_Store"})
 
 (defn servlet-mappings [project & ignore]
-  (vec
-    (distinct
-      (concat (remove (fn [path]
-                        (some #(.startsWith path %)
-                              (concat web-app-ignore ignore)))
-                      (map #(str \/ (.getName %)
-                                 (when (.isDirectory %) "/*"))
-                           (.listFiles
-                             (io/as-file
-                               (find-webapp-root project)))))
-              (get-in project [:ring :default-mappings])))))
+  (let [root (find-webapp-root project)]
+    (vec
+      (distinct
+        (concat (when (.exists (io/as-file root))
+                  (remove (fn [path]
+                            (some #(.startsWith path %)
+                                  (concat web-app-ignore ignore)))
+                          (map #(str \/ (.getName %)
+                                     (when (.isDirectory %) "/*"))
+                               (.listFiles (io/as-file root)))))
+                (get-in project [:ring :default-mappings]))))))
 
 (def ->default-servlet-mapping
   '(defn ->default-servlet-mapping [mappings]
