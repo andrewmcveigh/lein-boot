@@ -1,29 +1,43 @@
 # lein-boot
 
-A Leiningen plugin to run ring-servlet with Servlet 3 API.
+A Leiningen plugin to run lein-ring and ring-servlet with Servlet 3 API.
 
 ## Usage
 
-Put `[com.andrewmcveigh/lein-boot "0.1.1"]` into the `:plugins` vector
+Put `[com.andrewmcveigh/lein-boot "0.1.2"]` into the `:plugins` vector
 of your project.clj.
 
-You'll need the following dependencies:
+This plugin automatically adds the following dependencies, if other versions do
+not already exist in your project.clj:
 
 ```clojure
-[ring/ring-servlet "1.1.0" :exclusions [javax.servlet/servlet-api]]
+[ring/ring-servlet "1.1.8"]
+[org.eclipse.jetty/jetty-webapp "8.1.0.RC5"]
 ```
 
-You'll maybe also want to include ring/ring-devel. Probably best to put these
-in your :dev profile:
+### Hooks
+
+The following hooks exist
+
+    leiningen.boot.hooks.test
+    leiningen.boot.hooks.jar
+    leiningen.boot.hooks.uberjar
+
+To put in your project.clj
 
 ```clojure
-:profiles {:dev {:dependencies [[ring/ring-devel "1.1.0"]]}}
+:hooks [leiningen.boot.hooks.test
+        leiningen.boot.hooks.jar
+        leiningen.boot.hooks.uberjar]
 ```
 
 ## Example
 
     $ lein boot
     $ lein boot :port 8080
+    $ lein test
+    $ lein ring jar
+    $ lein ring uberjar
 
 ## License
 
