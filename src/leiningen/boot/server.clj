@@ -1,22 +1,22 @@
 (ns leiningen.boot.server
   (:use
     [leiningen.ring.util :only (compile-form ensure-handler-set! update-project)]
-    [leiningen.ring.server :only (add-server-dep)]) 
+    [leiningen.ring.server :only (add-server-dep)])
   (:require
     [clojure.string :as str]
     leiningen.jar
     leiningen.uberjar
-    [clojure.pprint] 
-    [leinjacker.deps :as deps] 
-    [leiningen.repl :as repl] 
-    [leiningen.test :as test] 
-    [leiningen.core.eval :as eval] 
-    [leiningen.core.main :as main] 
-    [leiningen.core.project :as project] 
-    [leinjacker.eval :refer (eval-in-project)] 
-    [ring.util.servlet :as servlet] 
-    [clojure.java.io :as io] 
-    [clojure.string :as string]) 
+    [clojure.pprint]
+    [leinjacker.deps :as deps]
+    [leiningen.repl :as repl]
+    [leiningen.test :as test]
+    [leiningen.core.eval :as eval]
+    [leiningen.core.main :as main]
+    [leiningen.core.project :as project]
+    [leinjacker.eval :refer (eval-in-project)]
+    [ring.util.servlet :as servlet]
+    [clojure.java.io :as io]
+    [clojure.string :as string])
   (:import
     [org.eclipse.jetty.server Server Request]
     [org.eclipse.jetty.server.handler AbstractHandler]
@@ -30,10 +30,13 @@
     [org.eclipse.jetty.webapp Configuration AbstractConfiguration WebAppContext
      WebAppClassLoader WebInfConfiguration WebXmlConfiguration
      MetaInfConfiguration FragmentConfiguration JettyWebXmlConfiguration
-     TagLibConfiguration])) 
+     TagLibConfiguration]))
 
 (defn default-main-namespace [project]
-  (let [handler-sym (get-in project [:ring :handler])]
+  (let [handler-sym (get-in project [:ring :handler])
+        handler-sym (if (sequential? handler-sym)
+                      (first handler-sym)
+                      handler-sym)]
     (str (namespace handler-sym) ".main")))
 
 (defn main-namespace [project]
@@ -51,6 +54,15 @@
             (.exists (io/as-file "src/main/webapp")) "src/main/webapp"
             (.exists (io/as-file "resources/public")) "resources/public"
             (.exists (io/as-file "public")) "public"))))
+
+(defn find-webapp-root-src [project]
+  `(let [war-resources# (:war-resources-path ~project "war-resources")]
+     (if (.exists (io/as-file war-resources#))
+       war-resources#
+       (cond (.exists (io/as-file "src/test/webapp")) "src/test/webapp"
+             (.exists (io/as-file "src/main/webapp")) "src/main/webapp"
+             (.exists (io/as-file "resources/public")) "resources/public"
+             (.exists (io/as-file "public")) "public"))))
 
 (def web-app-ignore
   #{"/WEB-INF" "/META-INF" "/.DS_Store"})
@@ -112,8 +124,7 @@
                     (assoc-in [:ring :auto-reload?] false))
         handlers (-> project :ring :handler)
         handlers (if (sequential? handlers) handlers [handlers])
-        default-mappings (servlet-mappings project)
-        webapp-root (find-webapp-root project)]
+        default-mappings (servlet-mappings project)]
     (compile-form project main-ns
       `(do
          (ns ~main-ns
@@ -134,7 +145,7 @@
          ~add-servlet-mappings
          (def ~'ring-server (atom nil))
          (defn ~'start-server [& [port#]]
-           (let [path# ~webapp-root
+           (let [path# ~(find-webapp-root-src project)
                  context# (WebAppContext. path# "/")
                  cloader# (WebAppClassLoader. context#)
                  meta-conf# (MetaInfConfiguration.)
@@ -222,7 +233,7 @@
 (defn jar
   "Create an executable $PROJECT-$VERSION.jar file."
   [f project]
-  (ensure-handler-set! project) 
+  (ensure-handler-set! project)
   (let [project (-> project add-server-dep add-main-class)
         project (add-deps project
                           '[ring/ring-servlet "1.1.8"]
@@ -233,7 +244,7 @@
 (defn uberjar
   "Create an executable $PROJECT-$VERSION.jar file."
   [project]
-  (ensure-handler-set! project) 
+  (ensure-handler-set! project)
   (let [project (-> project add-server-dep add-main-class)
         project (add-deps project
                           '[ring/ring-servlet "1.1.8"]
