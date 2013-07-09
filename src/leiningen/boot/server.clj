@@ -56,7 +56,13 @@
             (.exists (io/as-file "public")) "public"))))
 
 (defn find-webapp-root-src [project]
-  `(let [war-resources# (:war-resources-path ~project "war-resources")]
+  `(let [war-resources# ~(string/replace
+                           (string/replace
+                             (:war-resources-path project "war-resources") 
+                             (.getCanonicalPath (io/as-file "."))
+                             "") 
+                           #"^/" 
+                           "")]
      (if (.exists (io/as-file war-resources#))
        war-resources#
        (cond (.exists (io/as-file "src/test/webapp")) "src/test/webapp"
@@ -244,6 +250,7 @@
 (defn uberjar
   "Create an executable $PROJECT-$VERSION.jar file."
   [project]
+  (prn `uberjar)
   (ensure-handler-set! project)
   (let [project (-> project add-server-dep add-main-class)
         project (add-deps project

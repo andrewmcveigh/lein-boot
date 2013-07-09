@@ -93,7 +93,7 @@
   `(do
      (println)
      (println "lein-boot...")
-     (ns ~'boot)
+     ;(ns ~'boot)
      (require 'ring.util.servlet)
      (require '[clojure.string :as ~'string])
      ~(cons 'do
@@ -166,7 +166,8 @@
            (.setHandler context#)
            (.start))))
      (defn ~'stop-server [] (.stop @~'ring-server))
-     (ns ~'user)))
+     ;(ns ~'user)
+     ))
 
 (defn update-project
   "Update the project map using a function."
@@ -249,12 +250,15 @@
         project (update-in project
                            [:repl-options :init]
                            #(list 'do
+                                  '(prn "nonsess")
                                   %
                                   (boot-server (find-webapp-root project)
                                                port
                                                mappings
                                                handlers)
                                   '(boot/start-server)))]
+    (clojure.pprint/pprint project)
+    (prn)
     (case task
       "exit" nil
       "test" (test2 project
