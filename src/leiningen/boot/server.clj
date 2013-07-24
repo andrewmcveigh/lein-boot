@@ -135,23 +135,16 @@
       `(do
          (ns ~main-ns
            (:require ring.util.servlet
-                     [clojure.string :as ~'string])
+                     [clojure.string :as ~'string]
+                     ~@(distinct (map (comp symbol namespace) handlers)))
            (:gen-class))
-         ~(cons 'do
-                (for [handler (distinct (map (comp symbol namespace) handlers))]
-                  `(try
-                     (require '~handler)
-                     (catch RuntimeException e#
-                       (println)
-                       (println "Couldn't require handler namespace: " '~handler)
-                       (println)
-                       (.printStackTrace e#)))))
          ~meta-inf-resource
          ~->default-servlet-mapping
          ~add-servlet-mappings
          (def ~'ring-server (atom nil))
          (defn ~'start-server [& [port#]]
-           (let [path# ~(find-webapp-root-src project)
+           (let [port# (or port# ~(-> project :ring :port))
+                 path# ~(find-webapp-root-src project)
                  context# (WebAppContext. path# "/")
                  cloader# (WebAppClassLoader. context#)
                  meta-conf# (MetaInfConfiguration.)
@@ -207,19 +200,17 @@
                (.setHandler context#)
                (.start))))
          (defn ~'stop-server [] (.stop @~'ring-server))
-         (defn ~'-main
-           ([& ~'args]
-            {:pre [(or (empty? ~'args) (even? (count ~'args)))]}
-            (let [args-parser# {:port #(Integer. %)}
-                  ~'args (into {}
-                               (map (fn [[k# v#]]
-                                      {:pre [(.startsWith k# "--")]}
-                                      (let [k# (keyword (str/replace k# "--" ""))]
-                                        [k# ((args-parser# k# identity) v#)]))
-                                    (partition 2 ~'args)))
-                  port# (:port ~'args)]
-              (if port# (~'start-server port#) (~'start-server))))
-           ([] (~'-main nil)))))))
+         (defn ~'-main [& ~'args]
+           {:pre [(or (empty? ~'args) (even? (count ~'args)))]}
+           (let [args-parser# {:port #(Integer. %)}
+                 ~'args (into {}
+                              (map (fn [[k# v#]]
+                                     {:pre [(.startsWith k# "--")]}
+                                     (let [k# (keyword (str/replace k# "--" ""))]
+                                       [k# ((args-parser# k# identity) v#)]))
+                                   (partition 2 ~'args)))
+                 port# (:port ~'args)]
+             (if port# (~'start-server port#) (~'start-server))))))))
 
 (defn add-main-class [project]
   (update-project project assoc :main (symbol (main-namespace project))))

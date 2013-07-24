@@ -93,7 +93,7 @@
   `(do
      (println)
      (println "lein-boot...")
-     ;(ns ~'boot)
+     (ns ~'boot)
      (require 'ring.util.servlet)
      (require '[clojure.string :as ~'string])
      ~(cons 'do
@@ -110,6 +110,7 @@
      ~add-servlet-mappings
      (def ~'ring-server (atom nil))
      (defn ~'start-server [& [port#]]
+       (println "Starting server on port: " (or port# ~port))
        (let [path# ~webapp-root
              context# (WebAppContext. path# "/")
              cloader# (WebAppClassLoader. context#)
@@ -165,9 +166,8 @@
            (.stop)
            (.setHandler context#)
            (.start))))
-     (defn ~'stop-server [] (.stop @~'ring-server))
-     ;(ns ~'user)
-     ))
+     (defn ~'stop-server [] (.stop @~'ring-server) (reset! ~'ring-server nil))
+     (ns ~'user)))
 
 (defn update-project
   "Update the project map using a function."
@@ -239,26 +239,18 @@
         handlers (or (:handler (:ring project)) (:boot project))
         handlers (if (sequential? handlers) handlers [handlers])
         mappings (servlet-mappings project)
-        ;_  (clojure.pprint/pprint (boot-server (find-webapp-root project)
-                                               ;port
-                                               ;mappings
-                                               ;handlers))
-        ;_ (prn)
         project (add-deps project
                           '[ring/ring-servlet "1.1.8"]
                           '[org.eclipse.jetty/jetty-webapp "8.1.0.RC5"])
         project (update-in project
                            [:repl-options :init]
                            #(list 'do
-                                  '(prn "nonsess")
                                   %
                                   (boot-server (find-webapp-root project)
                                                port
                                                mappings
                                                handlers)
                                   '(boot/start-server)))]
-    (clojure.pprint/pprint project)
-    (prn)
     (case task
       "exit" nil
       "test" (test2 project
