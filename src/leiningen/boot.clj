@@ -26,6 +26,14 @@
      MetaInfConfiguration FragmentConfiguration JettyWebXmlConfiguration
      TagLibConfiguration]))
 
+(def | (System/getProperty "file.seperator"))
+
+(defn join-path [& args] 
+  {:pre [(every? (comp not nil?) args)]}
+  (let [ensure-no-delims #(string/replace % (re-pattern (format "(?:^%s)|(?:%s$)" | |)) "")]
+    (str (when (.startsWith (first args) |) |)
+         (string/join | (map ensure-no-delims args)))))
+
 (defn war-resources-path [project]
   (:war-resources-path project "war-resources"))
 
@@ -33,13 +41,13 @@
   (let [war-resources (war-resources-path project)]
     (if (.exists (io/as-file war-resources))
       war-resources
-      (cond (.exists (io/as-file "src/test/webapp")) "src/test/webapp"
-            (.exists (io/as-file "src/main/webapp")) "src/main/webapp"
-            (.exists (io/as-file "resources/public")) "resources/public"
+      (cond (.exists (io/as-file (join-path "src" "test" "webapp"))) (join-path "src" "test" "webapp")
+            (.exists (io/as-file (join-path "src" "main" "webapp"))) (join-path "src" "main" "webapp")
+            (.exists (io/as-file (join-path "resources" "public"))) (join-path "resources" "public")
             (.exists (io/as-file "public")) "public"))))
 
 (def web-app-ignore
-  #{"/WEB-INF" "/META-INF" "/.DS_Store"})
+  #{(str | "WEB-INF") (str | "META-INF") (str | ".DS_Store")})
 
 (defn servlet-mappings [project & ignore]
   (let [root (find-webapp-root project)]
@@ -112,7 +120,7 @@
      (defn ~'start-server [& [port#]]
        (println "Starting server on port: " (or port# ~port))
        (let [path# ~webapp-root
-             context# (WebAppContext. path# "/")
+             context# (WebAppContext. path# |)
              cloader# (WebAppClassLoader. context#)
              meta-conf# (MetaInfConfiguration.)
              mappings# (for [x# (seq (.getURLs (java.lang.ClassLoader/getSystemClassLoader)))
