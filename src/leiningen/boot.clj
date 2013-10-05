@@ -26,7 +26,7 @@
      MetaInfConfiguration FragmentConfiguration JettyWebXmlConfiguration
      TagLibConfiguration]))
 
-(def | (System/getProperty "file.seperator"))
+(def | (System/getProperty "file.separator"))
 
 (defn join-path [& args] 
   {:pre [(every? (comp not nil?) args)]}
