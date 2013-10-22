@@ -46,14 +46,18 @@
 (defn war-resources-path [project]
   (:war-resources-path project "war-resources"))
 
+(defn common-resource-dirs []
+  (cond (.exists (io/as-file "src/test/webapp")) "src/test/webapp"
+        (.exists (io/as-file "src/main/webapp")) "src/main/webapp"
+        (.exists (io/as-file "resources/public")) "resources/public"
+        (.exists (io/as-file "public")) "public"
+        (.exists (io/file "META-INF/resources")) "META-INF/resources"))
+
 (defn find-webapp-root [project]
   (let [war-resources (war-resources-path project)]
     (if (.exists (io/as-file war-resources))
       war-resources
-      (cond (.exists (io/as-file "src/test/webapp")) "src/test/webapp"
-            (.exists (io/as-file "src/main/webapp")) "src/main/webapp"
-            (.exists (io/as-file "resources/public")) "resources/public"
-            (.exists (io/as-file "public")) "public"))))
+      (common-resource-dirs))))
 
 (defn find-webapp-root-src [project]
   `(let [war-resources# ~(string/replace
@@ -68,10 +72,11 @@
        (cond (.exists (io/as-file "src/test/webapp")) "src/test/webapp"
              (.exists (io/as-file "src/main/webapp")) "src/main/webapp"
              (.exists (io/as-file "resources/public")) "resources/public"
-             (.exists (io/as-file "public")) "public"))))
+             (.exists (io/as-file "public")) "public"
+             (.exists (io/file "META-INF/resources")) "META-INF/resources"))))
 
 (def web-app-ignore
-  #{"/WEB-INF" "/META-INF" "/.DS_Store"})
+  #{"/WEB-INF" #_"/META-INF" "/.DS_Store"})
 
 (defn servlet-mappings [project & ignore]
   (let [root (find-webapp-root project)]
@@ -148,17 +153,32 @@
                  context# (WebAppContext. path# "/")
                  cloader# (WebAppClassLoader. context#)
                  meta-conf# (MetaInfConfiguration.)
-                 mappings# (for [x# (seq (.getURLs (java.lang.ClassLoader/getSystemClassLoader)))
-                                 :let [file# (io/as-file x#)
-                                       resource# (Resource/newResource file#)
-                                       filename# (.getName file#)]
-                                 :when (.endsWith filename# ".jar")]
-                             (do
-                               (.addJars cloader# resource#)
-                               (let [meta-inf-resource# (Resource/newResource
-                                                          (str "jar:file:"
-                                                               (.getCanonicalPath file#)
-                                                               "!/META-INF/resources"))]
+                 mappings# (concat
+                             (for [x# (seq (.getURLs (java.lang.ClassLoader/getSystemClassLoader)))
+                                   :let [file# (io/as-file x#)
+                                         resource# (Resource/newResource file#)
+                                         filename# (.getName file#)]
+                                   :when (.endsWith filename# ".jar")]
+                               (do
+                                 (.addJars cloader# resource#)
+                                 (let [meta-inf-resource# (Resource/newResource
+                                                            (str "jar:file:"
+                                                                 (.getCanonicalPath file#)
+                                                                 "!/META-INF/resources"))]
+                                   (when (.exists meta-inf-resource#)
+                                     (.addResource meta-conf#
+                                                   context#
+                                                   WebInfConfiguration/RESOURCE_URLS
+                                                   meta-inf-resource#)
+                                     (map #(let [dir?# (.isDirectory
+                                                         (Resource/newResource (str meta-inf-resource# %)))]
+                                             (str \/ % (when dir?# \*)))
+                                          (.list meta-inf-resource#))))))
+                             (for [file# (seq (.listFiles (io/file "META-INF")))
+                                   :let [resource# (Resource/newResource file#)
+                                         filename# (.getCanonicalPath file#)]
+                                   :when (.contains filename# "META-INF/resources")]
+                               (let [meta-inf-resource# (Resource/newResource (.getCanonicalPath file#))]
                                  (when (.exists meta-inf-resource#)
                                    (.addResource meta-conf#
                                                  context#
