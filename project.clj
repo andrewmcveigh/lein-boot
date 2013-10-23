@@ -6,6 +6,4 @@
   :dependencies [[ring/ring-servlet "1.1.8" :exclusions [javax.servlet/servlet-api]]
                  [org.eclipse.jetty/jetty-webapp "8.1.10.v20130312"]
                  [leinjacker "0.4.1"]]
-  :eval-in-leiningen true
-  :repositories [["snapshots" {:url "https://clojars.org/repo/" :creds :gpg}]
-                 ["releases" {:url "https://clojars.org/repo/" :creds :gpg}]])
+  :eval-in-leiningen true)

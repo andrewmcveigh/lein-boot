@@ -2,6 +2,7 @@
   (:require
     [clojure.pprint]
     [leinjacker.deps :as deps]
+    [leiningen.pprint :as pp]
     [leiningen.repl :as repl]
     [leiningen.test :as test]
     [leiningen.core.eval :as eval]
@@ -104,15 +105,14 @@
      (ns ~'boot)
      (require 'ring.util.servlet)
      (require '[clojure.string :as ~'string])
-     ~(cons 'do
-            (for [handler (distinct (map (comp symbol namespace) handlers))]
-              `(try
-                 (require '~handler)
-                 (catch RuntimeException e#
-                   (println)
-                   (println "Couldn't require handler namespace: " '~handler)
-                   (println)
-                   (.printStackTrace e#)))))
+     ~@(for [handler (distinct (map (comp symbol namespace) handlers))]
+         `(try
+            (require '~handler)
+            (catch RuntimeException e#
+              (println)
+              (println "Couldn't require handler namespace: " '~handler)
+              (println)
+              (.printStackTrace e#))))
      ~meta-inf-resource
      ~->default-servlet-mapping
      ~add-servlet-mappings
@@ -120,7 +120,7 @@
      (defn ~'start-server [& [port#]]
        (println "Starting server on port: " (or port# ~port))
        (let [path# ~webapp-root
-             context# (WebAppContext. path# |)
+             context# (WebAppContext. path# ~|)
              cloader# (WebAppClassLoader. context#)
              meta-conf# (MetaInfConfiguration.)
              mappings# (for [x# (seq (.getURLs (java.lang.ClassLoader/getSystemClassLoader)))
@@ -131,9 +131,9 @@
                          (do
                            (.addJars cloader# resource#)
                            (let [meta-inf-resource# (Resource/newResource
-                                                      (str "jar:file:"
-                                                           (.getCanonicalPath file#)
-                                                           "!/META-INF/resources"))]
+                                                     (str "jar:file:"
+                                                          (.getCanonicalPath file#)
+                                                          "!/META-INF/resources"))]
                              (when (.exists meta-inf-resource#)
                                (.addResource meta-conf#
                                              context#
@@ -145,31 +145,31 @@
                                     (.list meta-inf-resource#))))))]
          (.setConfigurationDiscovered context# true)
          (.setConfigurations
-           context#
-           (into-array Configuration
-                       [(WebInfConfiguration.)
-                        (WebXmlConfiguration.)
-                        meta-conf#
-                        (FragmentConfiguration.)
-                        (JettyWebXmlConfiguration.)]))
+          context#
+          (into-array Configuration
+                      [(WebInfConfiguration.)
+                       (WebXmlConfiguration.)
+                       meta-conf#
+                       (FragmentConfiguration.)
+                       (JettyWebXmlConfiguration.)]))
          (.setClassLoader context# cloader#)
          (when-not @~'ring-server (reset! ~'ring-server (Server. (or port# ~port))))
          (doseq [handler# ~(mapv (fn [x] `(var ~x)) handlers)
                  :let [ctx# (-> handler# meta :name name)]]
            (doto context#
              (.addServlet
-               (ServletHolder.
-                 (servlet/servlet handler#))
-               (str (when (and ~(> (count handlers) 1) ctx#)
-                      (str \/ ctx#)) "/*"))))
+              (ServletHolder.
+               (servlet/servlet handler#))
+              (str (when (and ~(> (count handlers) 1) ctx#)
+                     (str \/ ctx#)) "/*"))))
          (.addServlet (.getServletHandler context#)
                       (doto (ServletHolder.
-                              (org.eclipse.jetty.servlet.DefaultServlet.))
+                             (org.eclipse.jetty.servlet.DefaultServlet.))
                         (.setName "default")))
          (~'add-servlet-mappings
-           context#
-           (~'->default-servlet-mapping
-             (distinct (apply concat ~default-mappings mappings#))))
+          context#
+          (~'->default-servlet-mapping
+           (distinct (apply concat ~default-mappings mappings#))))
          (doto @~'ring-server
            (.stop)
            (.setHandler context#)
@@ -189,51 +189,7 @@
           project
           deps-specs))
 
-(def tasks #{"test" "repl"})
-
-(defn test2
-  "Run the project's tests.
-
-  Marking deftest or ns forms with metadata allows you to pick selectors to
-  specify a subset of your test suite to run:
-
-  (deftest ^:integration network-heavy-test
-  (is (= [1 2 3] (:numbers (network-operation)))))
-
-  Write the selectors in project.clj:
-
-  :test-selectors {:default (complement :integration)
-  :integration :integration
-  :all (constantly true)}
-
-  Arguments to this task will be considered test selectors if they are keywords,
-  otherwise arguments must be test namespaces or files to run. With no
-  arguments the :default test selector is used if present, otherwise all
-  tests are run. Test selector arguments must come after the list of namespaces.
-
-  A default :only test-selector is available to run select tests. For example,
-  `lein test :only leiningen.test.test/test-default-selector` only runs the
-  specified test. A default :all test-selector is available to run all tests."
-  [project form2 & tests]
-  (binding [main/*exit-process?* (if (= :leiningen (:eval-in project))
-                                   false
-                                   main/*exit-process?*)
-            test/*exit-after-tests* (if (= :leiningen (:eval-in project))
-                                      false
-                                      test/*exit-after-tests*)]
-    (let [project (project/merge-profiles project [:leiningen/test :test])
-          [nses selectors] (#'test/read-args tests project)
-          form (#'test/form-for-testing-namespaces nses nil (vec selectors))]
-      (try (when-let [n (eval/eval-in-project
-                          project
-                          `(do ~form2
-                               ;'(require 'boot)
-                               ~form)
-                          '(require 'clojure.test))]
-             (when (and (number? n) (pos? n))
-               (throw (ex-info "Tests Failed" {:exit-code n}))))
-        (catch clojure.lang.ExceptionInfo e
-          (main/abort "Tests failed."))))))
+(def tasks #{"pprint" "exit" "repl"})
 
 (defn boot [project & [task & more :as args]]
   (let [{:keys [port]}
@@ -249,21 +205,25 @@
         mappings (servlet-mappings project)
         project (add-deps project
                           '[ring/ring-servlet "1.1.8"]
-                          '[org.eclipse.jetty/jetty-webapp "8.1.0.RC5"])
-        project (update-in project
-                           [:repl-options :init]
-                           #(list 'do
-                                  %
-                                  (boot-server (find-webapp-root project)
-                                               port
-                                               mappings
-                                               handlers)
-                                  '(boot/start-server)))]
+                          '[org.eclipse.jetty/jetty-webapp "8.1.0.RC5"])]
     (case task
       "exit" nil
-      "test" (test2 project
-                    (boot-server (find-webapp-root project)
-                                 port
-                                 mappings
-                                 handlers))
-      (repl/repl project))))
+      "pprint" (pp/pprint `(do
+                             ~(boot-server (find-webapp-root project)
+                                           port
+                                           mappings
+                                           handlers)
+                             (~'boot/start-server)))
+      (do (-> (bound-fn []
+                (binding [eval/*pump-in* false]
+                  (eval/eval-in-project
+                   project
+                   `(do
+                      ~(boot-server (find-webapp-root project)
+                                    port
+                                    mappings
+                                    handlers)
+                      (~'boot/start-server))
+                   ['(require '[clojure.pprint :refer [pprint]])])))
+              (Thread.) (.start))
+          (repl/repl project)))))
