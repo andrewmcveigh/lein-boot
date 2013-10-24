@@ -1,12 +1,15 @@
 (ns leiningen.boot
   (:require
     [clojure.pprint]
+    [clojure.tools.nrepl.ack :as nrepl.ack]
+    [clojure.tools.nrepl.server :as nrepl.server]
     [leinjacker.deps :as deps]
     [leiningen.pprint :as pp]
     [leiningen.repl :as repl]
     [leiningen.test :as test]
     [leiningen.core.eval :as eval]
     [leiningen.core.main :as main]
+    [leiningen.core.user :as user]
     [leiningen.core.project :as project]
     [leinjacker.eval :refer (eval-in-project)]
     [ring.util.servlet :as servlet]
@@ -199,6 +202,55 @@
 
 (def tasks #{"pprint" "exit" "repl"})
 
+(defn server [project cfg headless? port mappings handlers]
+  (nrepl.ack/reset-ack-port!)
+  (when-not (repl/nrepl-dependency? project)
+    (main/info "Warning: no nREPL dependency detected.")
+    (main/info "Be sure to include org.clojure/tools.nrepl in :dependencies"
+               "of your profile."))
+  (let [prep-blocker @eval/prep-blocker
+        ack-port (:port @repl/ack-server)]
+    (-> (bound-fn []
+          (binding [eval/*pump-in* false]
+            (eval/eval-in-project
+             project
+             `(let [server# (clojure.tools.nrepl.server/start-server
+                             :bind ~(:host cfg) :port ~(:port cfg)
+                             :ack-port ~ack-port
+                             :handler ~(#'repl/handler-for project))
+                    port# (:port server#)
+                    repl-port-file# (apply io/file ~(if (:root project)
+                                                      [(:root project) ".nrepl-port"]
+                                                      [(user/leiningen-home) "repl-port"]))
+                    legacy-repl-port# (if (.exists (io/file ~(:target-path project)))
+                                        (io/file ~(:target-path project) "repl-port"))]
+                (spit (doto repl-port-file# .deleteOnExit) port#)
+                (when legacy-repl-port#
+                  (spit (doto legacy-repl-port# .deleteOnExit) port#))
+                @(promise))
+             `(do ~(when-let [init-ns (repl/init-ns project)]
+                     `(try (doto '~init-ns require in-ns)
+                           (catch Exception e# (println e#) (ns ~init-ns))))
+                  ~@(for [n (#'repl/init-requires project)]
+                      `(try (require ~n)
+                            (catch Throwable t#
+                              (println "Error loading" (str ~n ":")
+                                       (or (.getMessage t#) (type t#))))))
+                  ~(boot-server (find-webapp-root project)
+                                port
+                                mappings
+                                handlers)
+                  (~'boot/start-server)))))
+        (Thread.) (.start))
+    (when project @prep-blocker)
+    (when headless? @(promise))
+    (if-let [repl-port (nrepl.ack/wait-for-ack
+                        (get-in project [:repl-options :timeout] 60000))]
+      (do (main/info "nREPL server started on port"
+                     repl-port "on host" (:host cfg))
+          repl-port)
+      (main/abort "REPL server launch timed out."))))
+
 (defn boot [project & [task & more :as args]]
   (let [{:keys [port]}
         (if (tasks task)
@@ -212,6 +264,7 @@
         handlers (if (sequential? handlers) handlers [handlers])
         mappings (servlet-mappings project)
         project (add-deps project
+                          '[org.clojure/tools.nrepl "0.2.3"]
                           '[ring/ring-servlet "1.1.8"]
                           '[org.eclipse.jetty/jetty-webapp "8.1.0.RC5"])]
     (case task
@@ -222,13 +275,7 @@
                                            mappings
                                            handlers)
                              (~'boot/start-server)))
-      (do (eval/eval-in-project
-           project
-           `(do
-              ~(boot-server (find-webapp-root project)
-                            port
-                            mappings
-                            handlers)
-              (~'boot/start-server))
-           ['(require '[clojure.pprint :refer [pprint]])])
-          (repl/repl project)))))
+      (let [cfg {:host (repl/repl-host project)
+                 :port (repl/repl-port project)}]
+        (->> (server project cfg false port mappings handlers)
+             (repl/client project))))))
