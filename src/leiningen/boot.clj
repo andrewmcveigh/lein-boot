@@ -142,7 +142,12 @@
                                (map #(let [dir?# (.isDirectory
                                                   (Resource/newResource (str meta-inf-resource# %)))]
                                        (str \/ % (when dir?# \*)))
-                                    (.list meta-inf-resource#))))))]
+                                    (.list meta-inf-resource#))))))
+             p# (QueuedThreadPool. 50)]
+         (doto p#
+           (.setMinThreads 8)
+           ;(.setDaemon true)
+           )
          (.setConfigurationDiscovered context# true)
          (.setConfigurations
           context#
@@ -173,7 +178,10 @@
          (doto @~'ring-server
            (.stop)
            (.setHandler context#)
-           (.start))))
+           ;(.setThreadPool p#)
+           (.start)
+           ;(.join)
+           )))
      (defn ~'stop-server [] (.stop @~'ring-server) (reset! ~'ring-server nil))
      (ns ~'user)))
 
@@ -214,16 +222,13 @@
                                            mappings
                                            handlers)
                              (~'boot/start-server)))
-      (do (-> (bound-fn []
-                (binding [eval/*pump-in* false]
-                  (eval/eval-in-project
-                   project
-                   `(do
-                      ~(boot-server (find-webapp-root project)
-                                    port
-                                    mappings
-                                    handlers)
-                      (~'boot/start-server))
-                   ['(require '[clojure.pprint :refer [pprint]])])))
-              (Thread.) (.start))
+      (do (eval/eval-in-project
+           project
+           `(do
+              ~(boot-server (find-webapp-root project)
+                            port
+                            mappings
+                            handlers)
+              (~'boot/start-server))
+           ['(require '[clojure.pprint :refer [pprint]])])
           (repl/repl project)))))
