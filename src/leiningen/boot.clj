@@ -54,17 +54,17 @@
   #{(str | "WEB-INF") (str | "META-INF") (str | ".DS_Store")})
 
 (defn servlet-mappings [project & ignore]
-  (let [root (find-webapp-root project)]
-    (vec
-      (distinct
-        (concat (when (.exists (io/as-file root))
-                  (remove (fn [path]
-                            (some #(.startsWith path %)
-                                  (concat web-app-ignore ignore)))
-                          (map #(str \/ (.getName %)
-                                     (when (.isDirectory %) "/*"))
-                               (.listFiles (io/as-file root)))))
-                (get-in project [:ring :default-mappings]))))))
+  (or (get-in project [:ring :servlet-mappings])
+      (let [root (find-webapp-root project)]
+        (vec (distinct
+              (concat (when (.exists (io/as-file root))
+                        (remove (fn [path]
+                                  (some #(.startsWith path %)
+                                        (concat web-app-ignore ignore)))
+                                (map #(str \/ (.getName %)
+                                           (when (.isDirectory %) "/*"))
+                                     (.listFiles (io/as-file root)))))
+                      (get-in project [:ring :default-mappings])))))))
 
 (def ->default-servlet-mapping
   '(defn ->default-servlet-mapping [mappings]
@@ -104,7 +104,7 @@
 (defn boot-server [webapp-root port default-mappings handlers]
   `(do
      (println)
-     (println "lein-boot...")
+     (println "lein-boot 0.1.5-SNAPSHOT...")
      (ns ~'boot)
      (require 'ring.util.servlet)
      (require '[clojure.string :as ~'string])
@@ -147,6 +147,8 @@
                                        (str \/ % (when dir?# \*)))
                                     (.list meta-inf-resource#))))))
              p# (QueuedThreadPool. 50)]
+         (println "Mapping default handler:"
+                  (distinct (remove nil? (apply concat ~default-mappings mappings#))))
          (doto p#
            (.setMinThreads 8)
            ;(.setDaemon true)
