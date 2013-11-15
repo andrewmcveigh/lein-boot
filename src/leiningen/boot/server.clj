@@ -62,10 +62,10 @@
 (defn find-webapp-root-src [project]
   `(let [war-resources# ~(string/replace
                            (string/replace
-                             (:war-resources-path project "war-resources") 
+                             (:war-resources-path project "war-resources")
                              (.getCanonicalPath (io/as-file "."))
-                             "") 
-                           #"^/" 
+                             "")
+                           #"^/"
                            "")]
      (if (.exists (io/as-file war-resources#))
        war-resources#
