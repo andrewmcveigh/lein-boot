@@ -79,17 +79,18 @@
   #{"/WEB-INF" #_"/META-INF" "/.DS_Store"})
 
 (defn servlet-mappings [project & ignore]
-  (let [root (find-webapp-root project)]
-    (vec
-      (distinct
-        (concat (when (.exists (io/as-file root))
-                  (remove (fn [path]
-                            (some #(.startsWith path %)
-                                  (concat web-app-ignore ignore)))
-                          (map #(str \/ (.getName %)
-                                     (when (.isDirectory %) "/*"))
-                               (.listFiles (io/as-file root)))))
-                (get-in project [:ring :default-mappings]))))))
+  (or (get-in project [:ring :servlet-mappings])
+      (let [root (find-webapp-root project)]
+        (vec
+         (distinct
+          (concat (when (.exists (io/as-file root))
+                    (remove (fn [path]
+                              (some #(.startsWith path %)
+                                    (concat web-app-ignore ignore)))
+                            (map #(str \/ (.getName %)
+                                       (when (.isDirectory %) "/*"))
+                                 (.listFiles (io/as-file root)))))
+                  (get-in project [:ring :default-mappings])))))))
 
 (def ->default-servlet-mapping
   '(defn ->default-servlet-mapping [mappings]
