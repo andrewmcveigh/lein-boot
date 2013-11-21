@@ -267,7 +267,8 @@
         mappings (servlet-mappings project)
         project (add-deps project
                           '[org.clojure/tools.nrepl "0.2.3"]
-                          '[ring/ring-servlet "1.1.8"]
+                          '[ring/ring-core "1.2.1"]
+                          '[ring/ring-servlet "1.2.1"]
                           '[org.eclipse.jetty/jetty-webapp "8.1.0.RC5"])]
     (case task
       "exit" nil
