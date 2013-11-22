@@ -1,7 +1,4 @@
 (ns leiningen.boot.server
-  (:use
-    [leiningen.ring.util :only (compile-form ensure-handler-set! update-project)]
-    [leiningen.ring.server :only (add-server-dep)])
   (:require
     [clojure.string :as str]
     leiningen.jar
@@ -13,6 +10,8 @@
     [leiningen.core.eval :as eval]
     [leiningen.core.main :as main]
     [leiningen.core.project :as project]
+    [leiningen.ring.util :refer (compile-form ensure-handler-set! update-project)]
+    [leiningen.ring.server :refer (add-server-dep)]
     [leinjacker.eval :refer (eval-in-project)]
     [ring.util.servlet :as servlet]
     [clojure.java.io :as io]

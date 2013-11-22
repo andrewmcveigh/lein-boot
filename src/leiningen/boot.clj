@@ -32,7 +32,7 @@
 
 (def | (System/getProperty "file.separator"))
 
-(defn join-path [& args] 
+(defn join-path [& args]
   {:pre [(every? (comp not nil?) args)]}
   (let [ensure-no-delims #(string/replace % (re-pattern (format "(?:^%s)|(?:%s$)" | |)) "")]
     (str (when (.startsWith (first args) |) |)
