@@ -138,7 +138,7 @@
 (defn boot-server [webapp-root port default-mappings handlers]
   `(do
      (println)
-     (println "lein-boot 0.1.5-SNAPSHOT...")
+     (println "lein-boot 0.1.5...")
      (ns ~'boot)
      (require 'ring.util.servlet)
      (require '[clojure.string :as ~'string])
