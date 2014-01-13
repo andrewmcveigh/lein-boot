@@ -4,7 +4,6 @@
     [clojure.tools.nrepl.ack :as nrepl.ack]
     [clojure.tools.nrepl.server :as nrepl.server]
     [leinjacker.deps :as deps]
-    [leiningen.pprint :as pp]
     [leiningen.repl :as repl]
     [leiningen.test :as test]
     [leiningen.core.eval :as eval]

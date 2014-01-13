@@ -4,7 +4,6 @@
     [clojure.tools.nrepl.ack :as nrepl.ack]
     [clojure.tools.nrepl.server :as nrepl.server]
     [leinjacker.deps :as deps]
-    [leiningen.pprint :as pp]
     [leiningen.repl :as repl]
     [leiningen.test :as test]
     [leiningen.core.eval :as eval]
@@ -272,12 +271,6 @@
                           '[org.eclipse.jetty/jetty-webapp "8.1.0.RC5"])]
     (case task
       "exit" nil
-      "pprint" (pp/pprint `(do
-                             ~(boot-server (find-webapp-root project)
-                                           port
-                                           mappings
-                                           handlers)
-                             (~'boot/start-server)))
       (let [cfg {:host (repl/repl-host project)
                  :port (repl/repl-port project)}]
         (->> (server project cfg false port mappings handlers)
