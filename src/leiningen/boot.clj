@@ -103,7 +103,7 @@
 (defn boot-server [webapp-root port default-mappings handlers]
   `(do
      (println)
-     (println "lein-boot 0.1.5...")
+     (println "lein-boot...")
      (ns ~'boot)
      (require 'ring.util.servlet)
      (require '[clojure.string :as ~'string])
@@ -264,6 +264,16 @@
         handlers (or (:handler (:ring project)) (:boot project))
         handlers (if (sequential? handlers) handlers [handlers])
         mappings (servlet-mappings project)
+        project (project/merge-profiles project [:repl])
+        project (update-in project
+                           [:injections]
+                           (fnil into [])
+                           '[(when (try (require 'cemerick.austin.repls)
+                                        (catch Exception _))
+                               (defn cljs-repl []
+                                 (let [repl-env (reset! cemerick.austin.repls/browser-repl-env
+                                                        (cemerick.austin/repl-env))]
+                                   (cemerick.austin.repls/cljs-repl repl-env))))])
         project (add-deps project
                           '[org.clojure/tools.nrepl "0.2.3"]
                           '[ring/ring-core "1.2.1"]
