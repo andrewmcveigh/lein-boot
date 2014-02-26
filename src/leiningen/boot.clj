@@ -268,7 +268,7 @@
         project (update-in project
                            [:injections]
                            (fnil into [])
-                           '[(when (try (require 'cemerick.austin.repls)
+                           '[(when (try (require 'cemerick.austin.repls) true
                                         (catch Exception _))
                                (defn cljs-repl []
                                  (let [repl-env (reset! cemerick.austin.repls/browser-repl-env
