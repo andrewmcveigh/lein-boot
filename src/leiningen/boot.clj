@@ -265,15 +265,18 @@
         handlers (if (sequential? handlers) handlers [handlers])
         mappings (servlet-mappings project)
         project (project/merge-profiles project [:repl])
-        project (update-in project
-                           [:injections]
-                           (fnil into [])
-                           '[(when (try (require 'cemerick.austin.repls) true
-                                        (catch Exception _))
-                               (defn cljs-repl []
-                                 (let [repl-env (reset! cemerick.austin.repls/browser-repl-env
-                                                        (cemerick.austin/repl-env))]
-                                   (cemerick.austin.repls/cljs-repl repl-env))))])
+        austin? (some (comp #{'com.cemerick/austin} first) (:dependencies project))
+        project (if austin?
+                  (update-in project
+                             [:injections]
+                             (fnil into [])
+                             '[(when (try (require 'cemerick.austin.repls) true
+                                          (catch Exception _))
+                                 (defn cljs-repl []
+                                   (let [repl-env (reset! cemerick.austin.repls/browser-repl-env
+                                                          (cemerick.austin/repl-env))]
+                                     (cemerick.austin.repls/cljs-repl repl-env))))])
+                  project)
         project (add-deps project
                           '[org.clojure/tools.nrepl "0.2.3"]
                           '[ring/ring-core "1.2.1"]
@@ -281,6 +284,10 @@
                           '[org.eclipse.jetty/jetty-webapp "8.1.0.RC5"])]
     (case task
       "exit" nil
+      "test" (let [cfg {:host (repl/repl-host project)
+                        :port (repl/repl-port project)}]
+               (server project cfg false port mappings handlers)
+               (test/test project))
       (let [cfg {:host (repl/repl-host project)
                  :port (repl/repl-port project)}]
         (->> (server project cfg false port mappings handlers)
