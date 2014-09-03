@@ -115,12 +115,17 @@
               (println "Couldn't require handler namespace: " '~handler)
               (println)
               (.printStackTrace e#))))
+     (def ~'port
+       (with-open [socket# (java.net.ServerSocket. 0)]
+         (let [p# (.getLocalPort socket#)]
+           (spit "target/.boot-port" p#)
+           p#)))
      ~meta-inf-resource
      ~->default-servlet-mapping
      ~add-servlet-mappings
      (def ~'ring-server (atom nil))
      (defn ~'start-server [& [port#]]
-       (println "Starting server on port: " (or port# ~port))
+       (println "Starting server on port: " (or port# ~port ~'port))
        (let [path# ~webapp-root
              context# (WebAppContext. path# ~|)
              cloader# (WebAppClassLoader. context#)
@@ -162,7 +167,7 @@
                        (FragmentConfiguration.)
                        (JettyWebXmlConfiguration.)]))
          (.setClassLoader context# cloader#)
-         (when-not @~'ring-server (reset! ~'ring-server (Server. (or port# ~port))))
+         (when-not @~'ring-server (reset! ~'ring-server (Server. (or port# ~port ~'port))))
          (doseq [handler# ~(mapv (fn [x] `(var ~x)) handlers)
                  :let [ctx# (-> handler# meta :name name)]]
            (doto context#
@@ -286,7 +291,7 @@
       "exit" nil
       "test" (let [cfg {:host (repl/repl-host project)
                         :port (repl/repl-port project)}]
-               (server project cfg false port mappings handlers)
+               (server project cfg false nil mappings handlers)
                (test/test project))
       (let [cfg {:host (repl/repl-host project)
                  :port (repl/repl-port project)}]
