@@ -1,3 +1,7 @@
+## v0.1.11
+
+ - Always spit boot port
+
 ## v0.1.10
 
  - Spit random port to file for test
