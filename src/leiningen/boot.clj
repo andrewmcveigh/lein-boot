@@ -115,17 +115,18 @@
               (println "Couldn't require handler namespace: " '~handler)
               (println)
               (.printStackTrace e#))))
-     (def ~'port
-       (with-open [socket# (java.net.ServerSocket. 0)]
-         (let [p# (.getLocalPort socket#)]
-           (spit "target/.boot-port" p#)
-           p#)))
+     (when-not ~port
+       (def ~'port
+         (with-open [socket# (java.net.ServerSocket. 0)]
+           (let [p# (.getLocalPort socket#)]
+             p#))))
      ~meta-inf-resource
      ~->default-servlet-mapping
      ~add-servlet-mappings
      (def ~'ring-server (atom nil))
      (defn ~'start-server [& [port#]]
        (println "Starting server on port: " (or port# ~port ~'port))
+       (spit "target/.boot-port" (or port# ~port ~'port))
        (let [path# ~webapp-root
              context# (WebAppContext. path# ~|)
              cloader# (WebAppClassLoader. context#)
