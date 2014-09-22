@@ -1,3 +1,7 @@
+## v0.2.0
+
+ - Better app-root
+
 ## v0.1.11
 
  - Always spit boot port
