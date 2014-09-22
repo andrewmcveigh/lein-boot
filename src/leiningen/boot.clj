@@ -41,13 +41,15 @@
   (:war-resources-path project "war-resources"))
 
 (defn find-webapp-root [project]
-  (let [war-resources (war-resources-path project)]
-    (if (.exists (io/as-file war-resources))
-      war-resources
-      (cond (.exists (io/as-file (join-path "src" "test" "webapp"))) (join-path "src" "test" "webapp")
-            (.exists (io/as-file (join-path "src" "main" "webapp"))) (join-path "src" "main" "webapp")
-            (.exists (io/as-file (join-path "resources" "public"))) (join-path "resources" "public")
-            (.exists (io/as-file "public")) "public"))))
+  (let [a (->> (:resource-paths project)
+               (map #(io/file % "public"))
+               (filter #(.exists %))
+               (first))
+        b (io/as-file (join-path "resources" "public"))
+        c (io/as-file "public")]
+    (cond a (.getCanonicalPath a)
+          (.exists b) (.getCanonicalPath b)
+          (.exists c) (.getCanonicalPath c))))
 
 (def web-app-ignore
   #{(str | "WEB-INF") (str | "META-INF") (str | ".DS_Store")})
