@@ -1,3 +1,7 @@
+## v0.2.2
+
+ - Check root for nil first
+
 ## v0.2.1
 
  - Refactored to combine namespaces
