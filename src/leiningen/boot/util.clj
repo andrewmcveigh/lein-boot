@@ -32,12 +32,13 @@
         (vec
          (distinct
           (concat
-           (when (.exists (io/file root))
-             (->> (.listFiles (io/file root))
-                  (map #(str \/ (.getName %) (when (.isDirectory %) "/*")))
-                  (remove (fn [path]
-                            (some #(.startsWith path %)
-                                  (concat web-app-ignore ignore))))))
+           (when-let [root (io/file root)]
+             (when (.exists root)
+               (->> (.listFiles root)
+                    (map #(str \/ (.getName %) (when (.isDirectory %) "/*")))
+                    (remove (fn [path]
+                              (some #(.startsWith path %)
+                                    (concat web-app-ignore ignore)))))))
            (get-in project [:ring :default-mappings])))))))
 
 (def ->default-servlet-mapping
