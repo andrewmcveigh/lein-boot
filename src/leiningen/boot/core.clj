@@ -46,9 +46,6 @@
 (defn gen-main-form
   [ns-sym webapp-root handlers default-mappings port & {:keys [task]}]
   `(do
-     (def port# (or ~port
-                    (with-open [socket# (java.net.ServerSocket. 0)]
-                      (.getLocalPort socket#))))
      ~@(if (#{:jar :uberjar} task)
          `((ns ~ns-sym
              (:require ring.util.servlet
@@ -72,11 +69,16 @@
      ~util/->default-servlet-mapping
      ~util/add-servlet-mappings
      ~gen-mappings
+     (defn ~'get-port [port#]
+       (or port#
+           ~port
+           (with-open [socket# (java.net.ServerSocket. 0)]
+             (.getLocalPort socket#))))
      (def ~'ring-server (atom nil))
-     (defn ~'start-server [port#]
+     (defn ~'start-server [& [port#]]
        (when-not ~(#{:jar :uberjar} task)
-         (println "Starting server on port: " port#)
-         (spit "target/.boot-port" port#))
+         (println "Starting server on port: " (~'get-port port#))
+         (spit "target/.boot-port" (~'get-port port#)))
        (let [path# ~webapp-root
              context# (WebAppContext. path# ~util/|)
              cloader# (WebAppClassLoader. context#)
@@ -98,8 +100,8 @@
                        (FragmentConfiguration.)
                        (JettyWebXmlConfiguration.)]))
          (.setClassLoader context# cloader#)
-         (when-not @~'ring-server (reset! ~'ring-server (Server. port#)))
-         (doseq [handler# ~(mapv (fn [x] (list 'quote `(var ~x))) handlers)
+         (when-not @~'ring-server (reset! ~'ring-server (Server. (~'get-port port#))))
+         (doseq [handler# ~(mapv (fn [x] `(var ~x)) handlers)
                  :let [ctx# (-> handler# meta :name name)]]
            (doto context#
              (.addServlet (ServletHolder. (servlet/servlet handler#))
@@ -126,6 +128,6 @@
                                      (let [k# (keyword (string/replace k# "--" ""))]
                                        [k# ((args-parser# k# identity) v#)]))
                                    (partition 2 ~'args)))
-                 port# (or (:port ~'args) port#)]
+                 port# (:port ~'args)]
              (~'start-server port#)))
         `(ns ~'user))))

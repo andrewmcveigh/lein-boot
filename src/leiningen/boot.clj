@@ -80,7 +80,7 @@
                     mappings
                     port
                     :task :boot)
-                  (~'boot/start-server ~port)))))
+                  (~'boot/start-server)))))
         (Thread.)
         (.start))
     (when project @prep-blocker)

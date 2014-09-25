@@ -40,7 +40,7 @@
                     (assoc-in [:ring :auto-reload?] false))
         handlers (-> project :ring :handler)
         handlers (if (sequential? handlers) handlers [handlers])
-        port (-> project :ring :port)
+        port (or (-> project :ring :port) 8080)
         default-mappings (util/servlet-mappings project)]
     (compile-form project main-ns
                   (core/gen-main-form
@@ -72,8 +72,9 @@
   (ensure-handler-set! project)
   (let [project (-> project add-server-dep add-main-class)
         project (add-deps project
-                          '[ring/ring-servlet "1.1.8"]
-                          '[org.eclipse.jetty/jetty-webapp "8.1.0.RC5"])]
+                          '[ring/ring-core "1.3.1"]
+                          '[ring/ring-servlet "1.3.1"]
+                          '[org.eclipse.jetty/jetty-webapp "8.1.16.v20140903"])]
     (compile-main project)
     (leiningen.jar/jar project)))
 
@@ -84,7 +85,8 @@
   (ensure-handler-set! project)
   (let [project (-> project add-server-dep add-main-class)
         project (add-deps project
-                          '[ring/ring-servlet "1.1.8"]
-                          '[org.eclipse.jetty/jetty-webapp "8.1.0.RC5"])]
+                          '[ring/ring-core "1.3.1"]
+                          '[ring/ring-servlet "1.3.1"]
+                          '[org.eclipse.jetty/jetty-webapp "8.1.16.v20140903"])]
     (compile-main project)
     (leiningen.uberjar/uberjar project)))
