@@ -1,3 +1,7 @@
+## v0.2.1
+
+ - Refactored to combine namespaces
+
 ## v0.2.0
 
  - Better app-root
