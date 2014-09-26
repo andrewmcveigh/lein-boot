@@ -4,7 +4,7 @@ A Leiningen plugin to run lein-ring and ring-servlet with Servlet 3 API.
 
 ## Usage
 
-Put `[com.andrewmcveigh/lein-boot "0.2.2"]` into the `:plugins` vector
+Put `[com.andrewmcveigh/lein-boot "0.2.3"]` into the `:plugins` vector
 of your project.clj.
 
 This plugin automatically adds the following dependencies, if other versions do

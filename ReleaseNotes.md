@@ -1,3 +1,7 @@
+## v0.2.3
+
+ - Correct Server/random port impl
+
 ## v0.2.2
 
  - Check root for nil first
