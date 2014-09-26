@@ -69,16 +69,8 @@
      ~util/->default-servlet-mapping
      ~util/add-servlet-mappings
      ~gen-mappings
-     (defn ~'get-port [port#]
-       (or port#
-           ~port
-           (with-open [socket# (java.net.ServerSocket. 0)]
-             (.getLocalPort socket#))))
      (def ~'ring-server (atom nil))
      (defn ~'start-server [& [port#]]
-       (when-not ~(#{:jar :uberjar} task)
-         (println "Starting server on port: " (~'get-port port#))
-         (spit "target/.boot-port" (~'get-port port#)))
        (let [path# ~webapp-root
              context# (WebAppContext. path# ~util/|)
              cloader# (WebAppClassLoader. context#)
@@ -100,7 +92,7 @@
                        (FragmentConfiguration.)
                        (JettyWebXmlConfiguration.)]))
          (.setClassLoader context# cloader#)
-         (when-not @~'ring-server (reset! ~'ring-server (Server. (~'get-port port#))))
+         (when-not @~'ring-server (reset! ~'ring-server (Server. (or port# ~port 0))))
          (doseq [handler# ~(mapv (fn [x] `(var ~x)) handlers)
                  :let [ctx# (-> handler# meta :name name)]]
            (doto context#
@@ -116,7 +108,11 @@
          (doto @~'ring-server
            (.stop)
            (.setHandler context#)
-           (.start))))
+           (.start))
+         (when-not ~(#{:jar :uberjar} task)
+           (let [port# (.getLocalPort (first (.getConnectors @~'ring-server)))]
+             (println "Started server on port: " port#)
+             (spit "target/.boot-port" port#)))))
      (defn ~'stop-server [] (.stop @~'ring-server) (reset! ~'ring-server nil))
      ~(if (#{:jar :uberjar} task)
         `(defn ~'-main [& ~'args]
