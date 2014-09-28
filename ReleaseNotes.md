@@ -1,3 +1,7 @@
+## v0.2.5
+
+ - Don't set port on all tasks
+
 ## v0.2.4
 
  - Fix test hook
