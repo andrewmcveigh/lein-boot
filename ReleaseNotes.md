@@ -1,3 +1,9 @@
+## v0.2.6
+
+ - Use common boot fns inside main
+
+- Dynamic webapp root
+
 ## v0.2.5
 
  - Don't set port on all tasks
