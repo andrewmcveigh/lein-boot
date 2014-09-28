@@ -145,7 +145,6 @@
 
 (defn server [project & [port]]
   (let [headless? false
-        port (or port (:port (:ring project)) 8080)
         handlers (or (:handler (:ring project)) (:boot project))
         handlers (if (sequential? handlers) handlers [handlers])
         mappings (util/servlet-mappings project)

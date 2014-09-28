@@ -42,5 +42,5 @@
       "exit" nil
       "test" (do (core/server project)
                  (test/test project))
-      (->> (core/server project port)
+      (->> (core/server project (or port (:port (:ring project)) 8080))
            (repl/client project)))))
