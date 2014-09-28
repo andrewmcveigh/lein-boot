@@ -58,6 +58,7 @@
      ~@(if (#{:jar :uberjar} task)
          `((ns ~ns-sym
              (:require ring.util.servlet
+                       leiningen.boot.util
                        [clojure.string :as ~'string]
                        ~@(distinct (map (comp symbol namespace) handlers)))
              (:gen-class)))
@@ -65,6 +66,7 @@
            (println "lein-boot...")
            (ns ~ns-sym)
            (require 'ring.util.servlet)
+           (require 'leiningen.boot.util)
            (require '[clojure.string :as ~'string])
            ~@(for [handler (distinct (map (comp symbol namespace) handlers))]
                `(try
@@ -77,11 +79,10 @@
      ~util/meta-inf-resource
      ~util/->default-servlet-mapping
      ~util/add-servlet-mappings
-     ~(util/find-webapp-root project)
      ~gen-mappings
      (def ~'ring-server (atom nil))
      (defn ~'start-server [& [port#]]
-       (let [path# ~'webapp-root
+       (let [path# (util/find-webapp-root ~(util/resource-paths project))
              context# (WebAppContext. path# ~util/|)
              cloader# (WebAppClassLoader. context#)
              meta-conf# (MetaInfConfiguration.)
@@ -147,6 +148,18 @@
           project
           deps-specs))
 
+(defn add-project-deps [project]
+  (let [ver (->> (:plugins project)
+                 (filter #(= 'com.andrewmcveigh/lein-boot (first %)))
+                 first
+                 second)]
+    (add-deps project
+              `[com.andrewmcveigh/lein-boot ~ver]
+              '[org.clojure/tools.nrepl "0.2.5"]
+              '[ring/ring-core "1.3.1"]
+              '[ring/ring-servlet "1.3.1"]
+              '[org.eclipse.jetty/jetty-webapp "8.1.16.v20140903"])))
+
 (defn server [project & [port]]
   (let [headless? false
         handlers (or (:handler (:ring project)) (:boot project))
@@ -165,11 +178,7 @@
                                                           (cemerick.austin/repl-env))]
                                      (cemerick.austin.repls/cljs-repl repl-env))))])
                   project)
-        project (add-deps project
-                          '[org.clojure/tools.nrepl "0.2.5"]
-                          '[ring/ring-core "1.3.1"]
-                          '[ring/ring-servlet "1.3.1"]
-                          '[org.eclipse.jetty/jetty-webapp "8.1.16.v20140903"])
+        project (add-project-deps project)
         cfg {:host (repl/repl-host project)
              :port (repl/repl-port project)}]
     (nrepl.ack/reset-ack-port!)

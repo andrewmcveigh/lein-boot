@@ -13,23 +13,30 @@
     (str (when (.startsWith (first args) |) |)
          (string/join | (map ensure-no-delims args)))))
 
-(defn find-webapp-root [project]
-  '(def webapp-root
-     (let [a (->> ~(:resource-paths project)
-                  (map #(io/file % "public"))
-                  (filter #(.exists %))
-                  (first))
-           b (io/file (join-path "resources" "public"))
-           c (io/file "public")
-           d (io/file "META-INF/resources")]
-       (cond a (.getCanonicalPath a)
-             (.exists b) (.getCanonicalPath b)
-             (.exists c) (.getCanonicalPath c)
-             (.exists d) (.getCanonicalPath d)))))
+(defn resource-paths [project]
+  (->> project
+       :resource-paths
+       (map #(-> %
+                 (string/replace (.getCanonicalPath (io/file ".")) "")
+                 (string/replace #"^/" "")))
+       vec))
+
+(defn find-webapp-root [resource-paths]
+  (let [a (->> resource-paths
+               (map #(io/file % "public"))
+               (filter #(.exists %))
+               (first))
+        b (io/file (join-path "resources" "public"))
+        c (io/file "public")
+        d (io/file "META-INF/resources")]
+    (cond a (.getCanonicalPath a)
+          (.exists b) (.getCanonicalPath b)
+          (.exists c) (.getCanonicalPath c)
+          (.exists d) (.getCanonicalPath d))))
 
 (defn servlet-mappings [project & ignore]
   (or (get-in project [:ring :servlet-mappings])
-      (let [root (find-webapp-root project)]
+      (let [root (find-webapp-root (resource-paths project))]
         (vec
          (distinct
           (concat
