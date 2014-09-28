@@ -119,9 +119,12 @@
            (.stop)
            (.setHandler context#)
            (.start))
-         (when-not ~(#{:jar :uberjar} task)
-           (let [port# (.getLocalPort (first (.getConnectors @~'ring-server)))]
-             (println "Started server on port: " port#)
+         (let [port# (.getLocalPort (first (.getConnectors @~'ring-server)))]
+           (println "Started server on port: " port#)
+           (println "Classpath:")
+           (doseq [x# (.getURLs (java.lang.ClassLoader/getSystemClassLoader))]
+             (println x#))
+           (when-not ~(#{:jar :uberjar} task)
              (spit "target/.boot-port" port#)))))
      (defn ~'stop-server [] (.stop @~'ring-server) (reset! ~'ring-server nil))
      ~(if (#{:jar :uberjar} task)

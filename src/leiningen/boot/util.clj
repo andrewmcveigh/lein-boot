@@ -55,7 +55,7 @@
 
 (def meta-inf-resource
   '(defn meta-inf-resource [file]
-     (`Resource/newResource
+     (org.eclipse.jetty.util.resource.Resource/newResource
        (str "jar:file:" (.getCanonicalPath file) "!/META-INF/resources"))))
 
 (defn default-main-namespace [project]
