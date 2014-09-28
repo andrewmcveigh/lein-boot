@@ -53,7 +53,7 @@
          (.listFiles (io/file "META-INF")))))))
 
 (defn gen-main-form
-  [ns-sym webapp-root handlers default-mappings port & {:keys [task]}]
+  [project ns-sym handlers default-mappings port & {:keys [task]}]
   `(do
      ~@(if (#{:jar :uberjar} task)
          `((ns ~ns-sym
@@ -77,10 +77,11 @@
      ~util/meta-inf-resource
      ~util/->default-servlet-mapping
      ~util/add-servlet-mappings
+     ~(util/find-webapp-root project)
      ~gen-mappings
      (def ~'ring-server (atom nil))
      (defn ~'start-server [& [port#]]
-       (let [path# ~webapp-root
+       (let [path# ~'webapp-root
              context# (WebAppContext. path# ~util/|)
              cloader# (WebAppClassLoader. context#)
              meta-conf# (MetaInfConfiguration.)
@@ -168,7 +169,7 @@
                           '[org.clojure/tools.nrepl "0.2.5"]
                           '[ring/ring-core "1.3.1"]
                           '[ring/ring-servlet "1.3.1"]
-                          '[org.eclipse.jetty/jetty-webapp "8.1.10.v20130312"])
+                          '[org.eclipse.jetty/jetty-webapp "8.1.16.v20140903"])
         cfg {:host (repl/repl-host project)
              :port (repl/repl-port project)}]
     (nrepl.ack/reset-ack-port!)
@@ -205,8 +206,8 @@
                                 (println "Error loading" (str ~n ":")
                                          (or (.getMessage t#) (type t#))))))
                     ~(gen-main-form
+                      project
                       'boot
-                      (util/find-webapp-root project)
                       handlers
                       mappings
                       port

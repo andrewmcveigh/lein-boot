@@ -44,8 +44,8 @@
         default-mappings (util/servlet-mappings project)]
     (compile-form project main-ns
                   (core/gen-main-form
+                   project
                    main-ns
-                   (util/find-webapp-root project)
                    handlers
                    default-mappings
                    port
@@ -74,7 +74,7 @@
         project (add-deps project
                           '[ring/ring-core "1.3.1"]
                           '[ring/ring-servlet "1.3.1"]
-                          '[org.eclipse.jetty/jetty-webapp "8.1.10.v20130312"])]
+                          '[org.eclipse.jetty/jetty-webapp "8.1.16.v20140903"])]
     (compile-main project)
     (leiningen.jar/jar project)))
 
@@ -87,6 +87,6 @@
         project (add-deps project
                           '[ring/ring-core "1.3.1"]
                           '[ring/ring-servlet "1.3.1"]
-                          '[org.eclipse.jetty/jetty-webapp "8.1.10.v20130312"])]
+                          '[org.eclipse.jetty/jetty-webapp "8.1.16.v20140903"])]
     (compile-main project)
     (leiningen.uberjar/uberjar project)))

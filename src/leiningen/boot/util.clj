@@ -14,17 +14,18 @@
          (string/join | (map ensure-no-delims args)))))
 
 (defn find-webapp-root [project]
-  (let [a (->> (:resource-paths project)
-               (map #(io/file % "public"))
-               (filter #(.exists %))
-               (first))
-        b (io/file (join-path "resources" "public"))
-        c (io/file "public")
-        d (io/file "META-INF/resources")]
-    (cond a (.getCanonicalPath a)
-          (.exists b) (.getCanonicalPath b)
-          (.exists c) (.getCanonicalPath c)
-          (.exists d) (.getCanonicalPath d))))
+  '(def webapp-root
+     (let [a (->> ~(:resource-paths project)
+                  (map #(io/file % "public"))
+                  (filter #(.exists %))
+                  (first))
+           b (io/file (join-path "resources" "public"))
+           c (io/file "public")
+           d (io/file "META-INF/resources")]
+       (cond a (.getCanonicalPath a)
+             (.exists b) (.getCanonicalPath b)
+             (.exists c) (.getCanonicalPath c)
+             (.exists d) (.getCanonicalPath d)))))
 
 (defn servlet-mappings [project & ignore]
   (or (get-in project [:ring :servlet-mappings])
