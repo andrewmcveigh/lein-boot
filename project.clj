@@ -5,6 +5,6 @@
             :url "http://www.eclipse.org/legal/epl-v10.html"}
   :dependencies [[org.clojure/tools.nrepl "0.2.3"]
                  [ring/ring-servlet "1.3.1" :exclusions [javax.servlet/servlet-api]]
-                 [org.eclipse.jetty/jetty-webapp "8.1.16.v20140903"]
+                 [org.eclipse.jetty/jetty-webapp "8.1.10.v20130312"]
                  [leinjacker "0.4.1"]]
   :eval-in-leiningen true)
