@@ -2,15 +2,14 @@
   "Enables `lein test` to use the `lein boot` functionality and namespace"
   (:require 
     [leiningen.boot]
+    [leiningen.boot.core :as core]
     [robert.hooke]))
 
 (def ^:dynamic *in-hook?* nil)
 
 (defn test-hook [f project & args]
-  (if *in-hook?*
-    (apply f project args)
-    (binding [*in-hook?* true]
-      (apply leiningen.boot/boot project "test" args))))
+  (core/server project)
+  (apply f project args))
 
 (defn activate []
   (robert.hooke/add-hook #'leiningen.test/test test-hook))
