@@ -1,4 +1,4 @@
-(defproject com.andrewmcveigh/lein-boot "0.2.6"
+(defproject com.andrewmcveigh/lein-boot "0.2.7-SNAPSHOT"
   :description "A Leiningen plugin to run ring-servlet with Servlet 3 API."
   :url "http://github.com/andrewmcveigh/lein-boot"
   :license {:name "Eclipse Public License"
