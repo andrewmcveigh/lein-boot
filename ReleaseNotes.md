@@ -1,3 +1,7 @@
+## v0.2.4
+
+ - Fix test hook
+
 ## v0.2.3
 
  - Correct Server/random port impl
