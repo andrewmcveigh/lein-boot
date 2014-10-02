@@ -21,37 +21,6 @@
     WebInfConfiguration WebXmlConfiguration MetaInfConfiguration
     FragmentConfiguration JettyWebXmlConfiguration]))
 
-(def gen-mappings
-  `(do
-     (defn ~'gen-mappings* [context# meta-conf# cloader# files#]
-       (for [file# files#
-             :let [resource# (Resource/newResource file#)
-                   filename# (.getName file#)]
-             :when (.endsWith filename# ".jar")]
-         (do
-           (.addJars cloader# resource#)
-           (let [meta-inf-resource# (Resource/newResource
-                                    (str "jar:file:"
-                                         (.getCanonicalPath file#)
-                                         "!/META-INF/resources"))]
-             (when (.exists meta-inf-resource#)
-               (.addResource meta-conf#
-                             context#
-                             WebInfConfiguration/RESOURCE_URLS
-                             meta-inf-resource#)
-               (map #(let [dir?# (.isDirectory
-                                  (Resource/newResource (str meta-inf-resource# %)))]
-                       (str ~util/| % (when dir?# \*)))
-                    (.list meta-inf-resource#)))))))
-     (defn ~'gen-mappings [context# meta-conf# cloader#]
-       (concat
-        (~'gen-mappings*
-         context# meta-conf# cloader#
-         (map io/file (.getURLs (java.lang.ClassLoader/getSystemClassLoader))))
-        (~'gen-mappings*
-         context# meta-conf# cloader#
-         (.listFiles (io/file "META-INF")))))))
-
 (defn gen-main-form
   [project ns-sym handlers default-mappings port & {:keys [task]}]
   `(do
@@ -76,23 +45,18 @@
                     (println "Couldn't require handler namespace: " '~handler)
                     (println)
                     (.printStackTrace e#))))))
-     ~util/meta-inf-resource
-     ~util/->default-servlet-mapping
-     ~util/add-servlet-mappings
-     ~gen-mappings
      (def ~'ring-server (atom nil))
      (defn ~'start-server [& [port#]]
        (let [path# (util/find-webapp-root ~(util/resource-paths project))
-             context# (WebAppContext. path# ~util/|)
+             context# (doto (WebAppContext. path# ~util/|)
+                        (.setInitParameter "aliases" "True"))
              cloader# (WebAppClassLoader. context#)
              meta-conf# (MetaInfConfiguration.)
-             mappings#
-             (distinct
-              (remove nil?
-                      (apply concat
-                             ~default-mappings
-                             (remove ~util/web-app-ignore
-                                     (~'gen-mappings context# meta-conf# cloader#)))))]
+             mappings# (util/mappings ~default-mappings
+                                      ~(util/resource-paths project)
+                                      context#
+                                      meta-conf#
+                                      cloader#)]
          (println "Mapping default handler:" mappings#)
          (.setConfigurationDiscovered context# true)
          (.setConfigurations
@@ -114,9 +78,9 @@
          (.addServlet (.getServletHandler context#)
                       (doto (ServletHolder. (DefaultServlet.))
                         (.setName "default")))
-         (~'add-servlet-mappings
+         (util/add-servlet-mappings
           context#
-          (~'->default-servlet-mapping mappings#))
+          (util/->default-servlet-mapping mappings#))
          (doto @~'ring-server
            (.stop)
            (.setHandler context#)
@@ -124,8 +88,6 @@
          (let [port# (.getLocalPort (first (.getConnectors @~'ring-server)))]
            (println "Started server on port: " port#)
            (println "Classpath:")
-           (doseq [x# (.getURLs (java.lang.ClassLoader/getSystemClassLoader))]
-             (println x#))
            (when-not ~(#{:jar :uberjar} task)
              (spit "target/.boot-port" port#)))))
      (defn ~'stop-server [] (.stop @~'ring-server) (reset! ~'ring-server nil))
